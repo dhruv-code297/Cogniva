@@ -7,7 +7,7 @@ export default function DashboardLayout({children}:any) {
     <SidebarProvider>
       <AppSidebar/>
       <SidebarTrigger/>
-    <div>
+    <div  className='w-full'>
       {children}
     </div>
     </SidebarProvider>
