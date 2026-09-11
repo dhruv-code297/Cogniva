@@ -1,7 +1,9 @@
 "use client"
 import { Button } from '@/components/ui/button'
-import { ArrowUp, BriefcaseBusiness, Mail, Plus, Search } from 'lucide-react'
+import axios from 'axios'
+import { ArrowUp, BriefcaseBusiness, Loader2, Mail, Plus, Search } from 'lucide-react'
 import React, { useState } from 'react'
+import AIAgentQuestions from './AIAgentQuestions'
 
 const quickSuggestions = [
    {
@@ -56,8 +58,51 @@ const templates = [
   },
 ];
 
+type AgentConfigResp = {
+  status:'needs_clarification' | 'ready',
+  clarificationQuestions:ClarificationQuestion[],
+  config:any
+}
+
+ export type ClarificationQuestion = {
+  id:string,
+  question:string,
+  type:"single_select" | "mutli_select" | "text" | "number" | "date" | "time",
+  options:string[],
+  allowCustom:boolean,
+  customPlaceholder:string
+}
+
 export default function CreateAgent() {
      const [prompt,setPrompt] = useState('')
+
+     const [configResult,setConfigResult] = useState<AgentConfigResp|null>(null)
+
+     const [loading,setLoading] = useState(false)
+
+    const onSubmit = async ()=>{
+      setLoading(true)
+      const result = await axios.post('/api/agent/configure',{
+        prompt:prompt
+      })
+      console.log(result.data);
+      setConfigResult(result.data);
+      setLoading(false)
+    }
+
+  const  onComplete= async (ans:any)=>{
+    console.log(ans)
+    setConfigResult(null)
+    const updatedPrompt = prompt+"/n"+JSON.stringify(ans);
+     const result = await axios.post('/api/agent/configure',{
+        prompt:updatedPrompt
+      })
+      console.log(result.data);
+      setConfigResult(result.data);
+      setLoading(false)
+    
+  }
+
   return (
     <div>
       <div className='mt-5'>
@@ -73,8 +118,9 @@ export default function CreateAgent() {
                     <Plus/>
                 </Button>
             </div>
-                <Button size={'icon'} className={'h-9 w-9 rounded-full bg-purple-600'}>
-                    <ArrowUp/>
+                <Button disabled={loading}
+                 onClick={onSubmit} size={'icon'} className={'h-9 w-9 rounded-full bg-purple-600'}>
+                    {loading ? <Loader2 className='animate-spin'/> :<ArrowUp/>}
                 </Button>
         </div>
       </div>
@@ -87,7 +133,13 @@ export default function CreateAgent() {
             </Button>
         ))}
       </div>
-      <div className='mt-10'>
+
+  {loading ? <div className='flex gap-2 items-center p-5 mt-7 border rounded-xl shadow'>
+  <Loader2 className='animate-spin'/>
+  <h2>Generating Agent Config...</h2>
+</div>
+:
+     !configResult &&  <div className='mt-10'>
         <h2 className='flex text-lg justify-between items-center font-semibold'>Get Started <span className='text-sm font-medium'>View All</span></h2>
         <div className='grid grid-cols-1 gap-4 md:grid-cols-3 mt-3'>{templates.map((template,index)=>(
             <div key={index} className={`border rounded-2xl p-5 hover:cursor-pointer hover:shadow-lg ${template.border} ${template.glow}`}>
@@ -98,7 +150,16 @@ export default function CreateAgent() {
                 </div>
             </div>
         ))}</div>
+      </div>}
+
+      {configResult && 
+      <div className='p-5 border rounded-2xl '>
+        {configResult.status=='needs_clarification' && <AIAgentQuestions questionList={configResult.clarificationQuestions}
+        onComplete={(resp:any)=>onComplete(resp)}
+        />}
+        <p>{JSON.stringify(configResult)}</p>
       </div>
+      }
     </div>
   )
 }

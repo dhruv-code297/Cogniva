@@ -6,8 +6,11 @@ import axios from 'axios'
 import Provider from './provider';
 
 export const metadata: Metadata = {
-  title: "Next.js Premium Startup Boilerplate",
-  description: "Created using the ultimate interactive Next.js stack generator CLI.",
+  title: "Cogniva - AI Agent Platform For Daily Tasks",
+  description: "Cogniva is an AI agent platform that automates daily tasks and workflows, helping you get more done with less effort.",
+  icons:{
+    icon:'/logo.svg'
+  }
 };
 const figTree = Figtree({subsets:['latin']})
  
