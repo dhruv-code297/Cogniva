@@ -4,6 +4,7 @@ import axios from 'axios'
 import { ArrowUp, BriefcaseBusiness, Loader2, Mail, Plus, Search } from 'lucide-react'
 import React, { useState } from 'react'
 import AIAgentQuestions from './AIAgentQuestions'
+import NewAgentCard from './NewAgentCard'
 
 const quickSuggestions = [
    {
@@ -73,12 +74,37 @@ type AgentConfigResp = {
   customPlaceholder:string
 }
 
+export type CreatedAgentType = {
+  id:number,
+  userEmail:string,
+  agentId:string,
+  name:string,
+  agentImage:string,
+  description:string,
+  instructions:string,
+  objective:string,
+  tools:any,
+  skills:string[],
+  schedule: AgentSchedule,
+  outputFormat:string,
+  status:string,
+  createdAt:string
+}
+
+export type AgentSchedule= {
+  type: "once" | "recurring" | "manual"
+  frequency?: "hourly" | "daily" | "weekly" | "monthly"
+  time?:string
+}
+
 export default function CreateAgent() {
      const [prompt,setPrompt] = useState('')
 
      const [configResult,setConfigResult] = useState<AgentConfigResp|null>(null)
 
      const [loading,setLoading] = useState(false)
+
+     const [createdAgent,setCreatedAgent] = useState<CreatedAgentType | null>(null)
 
     const onSubmit = async ()=>{
       setLoading(true)
@@ -87,6 +113,9 @@ export default function CreateAgent() {
       })
       console.log(result.data);
       setConfigResult(result.data);
+      if(result.data?.status_=='ready'){
+        setCreatedAgent(result.data)
+      }
       setLoading(false)
     }
 
@@ -99,6 +128,7 @@ export default function CreateAgent() {
       })
       console.log(result.data);
       setConfigResult(result.data);
+      setCreatedAgent(result.data)
       setLoading(false)
     
   }
@@ -149,17 +179,23 @@ export default function CreateAgent() {
                     <p className='text-sm mt-2 leading-5 text-muted-foreground'>{template.description}</p>
                 </div>
             </div>
-        ))}</div>
+        ))}
+        </div>
       </div>}
 
       {configResult && 
-      <div className='p-5 border rounded-2xl '>
-        {configResult.status=='needs_clarification' && <AIAgentQuestions questionList={configResult.clarificationQuestions}
+        configResult.status=='needs_clarification'
+           &&
+          <div className='p-5 border rounded-2xl'>
+         <AIAgentQuestions questionList={configResult.clarificationQuestions}
         onComplete={(resp:any)=>onComplete(resp)}
-        />}
-        <p>{JSON.stringify(configResult)}</p>
-      </div>
-      }
+        />
+        </div>
+        }
+
+        {/* <p>{JSON.stringify(configResult)}</p> */}
+       
+        {createdAgent && <NewAgentCard createdAgent={createdAgent} setUpdatedAgent={(value:CreatedAgentType)=>setCreatedAgent(value)}/>}
     </div>
   )
 }

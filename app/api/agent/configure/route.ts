@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import {GoogleGenAI, ThinkingLevel} from '@google/genai'
 import { AgentConfigSystemPrompt } from "@/data/Prompt";
 import { AgentConfigRespSchema } from "@/data/ResponseSchema";
-import { db, tools } from "@/db";
+import { AgentConfig, db, tools } from "@/db";
+import { currentUser } from "@clerk/nextjs/server";
+import { eq } from "drizzle-orm";
 
 export async function POST(req:NextRequest){
     const {prompt} = await req.json();
+    const user = await currentUser();
     if(!prompt.trim()){
         return NextResponse.json({error:'Prompt is required'},{status:400})
     }
@@ -27,9 +30,39 @@ export async function POST(req:NextRequest){
                 responseSchema:AgentConfigRespSchema
             }
         })
+
+        //save final agent config 
+        const aiOutput = JSON.parse(response.text??'{}')
+        if(aiOutput.status=='ready'){
+            const agentId = crypto.randomUUID()
+            const dbResult = await db.insert(AgentConfig).values({
+                ...aiOutput.config,
+                agentImage:'https://api.dicebear.com/10.x/bottts/svg?seed='+agentId,
+                agentId:agentId,
+                userEmail:user?.primaryEmailAddress?.emailAddress
+            }).returning();
+             return NextResponse.json({...dbResult[0],status_:'ready'});
+        }
+
         return NextResponse.json(JSON.parse(response.text??'{}'));
     } catch (e) {
         console.error('Error',e);
         return NextResponse.json({error:e},{status:500})
     }
+}
+
+export async function PUT(req:NextRequest){
+    const agentConfig = await req.json()
+    
+   try {
+     const result = await db.update(AgentConfig).set({
+         ...agentConfig,
+         createdAt: new Date()
+     }).where(eq(AgentConfig.agentId,agentConfig?.agentId))
+     .returning()
+ 
+     return NextResponse.json(result[0]);
+   } catch (e) {
+        return NextResponse.json({error:'Internal Server Error'},{status:500});
+   }
 }

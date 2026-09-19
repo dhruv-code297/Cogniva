@@ -144,13 +144,20 @@ export default function AIAgentQuestions({
                 </div>
 
 
-                {/* TEXT QUESTION */}
+                {/* TEXT, NUMBER, DATE, AND TIME QUESTIONS */}
 
-                {currentQuestion.type === "text" && (
+                {currentQuestion.type !== "single_select" && (
 
                     <div className="space-y-3">
 
                         <Input
+                            type={
+                                currentQuestion.type === "number" ||
+                                currentQuestion.type === "date" ||
+                                currentQuestion.type === "time"
+                                    ? currentQuestion.type
+                                    : "text"
+                            }
                             value={currentAnswer}
                             onChange={(e) =>
                                 handleAnswer(e.target.value)
