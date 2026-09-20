@@ -4,7 +4,7 @@ import { AgentConfigSystemPrompt } from "@/data/Prompt";
 import { AgentConfigRespSchema } from "@/data/ResponseSchema";
 import { AgentConfig, db, tools } from "@/db";
 import { currentUser } from "@clerk/nextjs/server";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 export async function POST(req:NextRequest){
     const {prompt} = await req.json();
@@ -65,4 +65,12 @@ export async function PUT(req:NextRequest){
    } catch (e) {
         return NextResponse.json({error:'Internal Server Error'},{status:500});
    }
+}
+
+export async function GET(req:NextRequest){
+    const user = await currentUser();
+    if(!user) return NextResponse.json({error:"Unauthorized User"},{status:400})
+    const result  = await db.select().from(AgentConfig).where(eq(AgentConfig.userEmail,user?.primaryEmailAddress?.emailAddress??'')).
+    orderBy(desc(AgentConfig?.createdAt))
+    return NextResponse.json(result);
 }

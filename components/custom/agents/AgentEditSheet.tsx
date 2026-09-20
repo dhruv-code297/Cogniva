@@ -35,10 +35,12 @@ import axios from "axios"
 
 
 type Props = {
-  children: React.ReactNode
+  children?: React.ReactNode
   agentConfig: CreatedAgentType | null
   connectedTools?: Tool[]
-  setUpdatedAgent:any 
+  setUpdatedAgent:any ,
+  openSheet_?:boolean,
+  closeSheet?:any
 }
 
 
@@ -70,11 +72,12 @@ const FREQUENCY_OPTIONS = [
 export default function AgentEditSheet({
   children,
   agentConfig,
-  connectedTools = [],
-    setUpdatedAgent
+    setUpdatedAgent,
+    openSheet_=false,
+    closeSheet
 }: Props) {
 
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(openSheet_)
 
   const [draftAgent, setDraftAgent] =
     useState<CreatedAgentType | null>(agentConfig)
@@ -82,6 +85,11 @@ export default function AgentEditSheet({
 
   const [skillInput, setSkillInput] =
     useState("")
+
+  const handleOpenChange = (value: boolean) => {
+    setOpen(value)
+    closeSheet?.(value)
+  }
 
   useEffect(() => {
     if (agentConfig) {
@@ -172,7 +180,7 @@ return;
       type:"success",
   title: "Agent Updated!",
 })
-setOpen(false)
+  handleOpenChange(false)
   }
 
 
@@ -228,7 +236,7 @@ setOpen(false)
 
   if (!draftAgent) {
     return ( 
-      <Sheet open={open} onOpenChange={setOpen}>
+      <Sheet open={open} onOpenChange={(v:boolean)=>{setOpen(v);closeSheet(v)}}>
         <SheetTrigger>
           {children}
         </SheetTrigger>
@@ -251,7 +259,7 @@ setOpen(false)
   return (
     <Sheet
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={handleOpenChange}
     >
 
       <SheetTrigger>
@@ -859,7 +867,7 @@ setOpen(false)
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setOpen(false)}
+                onClick={() => handleOpenChange(false)}
               >
                 Cancel
               </Button>
