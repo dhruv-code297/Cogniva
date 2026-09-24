@@ -5,11 +5,15 @@ import {
   CalendarClock,
   Clock3,
   FileText,
+  Link2,
+  Loader2,
+  Loader2Icon,
   Plus,
   Save,
   Shuffle,
   Sparkles,
   Target,
+  Unlink,
   Wrench,
   X,
 } from "lucide-react"
@@ -32,12 +36,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { CreatedAgentType } from "./CreateAgent"
 import { toast } from "@/components/ui/toast"
 import axios from "axios"
+import Image from "next/image"
 
 
 type Props = {
   children?: React.ReactNode
   agentConfig: CreatedAgentType | null
-  connectedTools?: Tool[]
   setUpdatedAgent:any ,
   openSheet_?:boolean,
   closeSheet?:any
@@ -61,6 +65,13 @@ type Tool = {
   icon?: string
 }
 
+type EditableTool = {
+  name:string,
+  connected:boolean,
+  slug:string,
+  logo:string,
+}
+
 
 const FREQUENCY_OPTIONS = [
   "Daily",
@@ -82,6 +93,12 @@ export default function AgentEditSheet({
   const [draftAgent, setDraftAgent] =
     useState<CreatedAgentType | null>(agentConfig)
 
+    const [tools,setTools] = useState<EditableTool[]>([])
+
+    const [loadingTools,setLoadingTools] = useState(false)
+
+    const [disconnectToolLoading,setDisconnectToolLoading] = useState(false)
+
 
   const [skillInput, setSkillInput] =
     useState("")
@@ -92,12 +109,8 @@ export default function AgentEditSheet({
   }
 
   useEffect(() => {
-    if (agentConfig) {
-      setDraftAgent({
-        ...agentConfig,
-        skills: agentConfig.skills || [],
-      })
-    }
+    setDraftAgent(agentConfig)
+    agentConfig&&GetTools()
   }, [agentConfig])
 
 
@@ -220,6 +233,15 @@ return;
     )
   }
 
+  //get tools
+  const GetTools = async ()=>{
+    setLoadingTools(true)
+    const result = await axios.get('/api/agent/tools?agentId='+agentConfig?.agentId)
+    setTools(result.data)
+    setLoadingTools(false)
+  }
+
+  const ConnectedTools = tools.filter(tool=>tool.connected==true)
 
   const handleSkillKeyDown = (
     event: React.KeyboardEvent<HTMLInputElement>
@@ -233,6 +255,38 @@ return;
     }
   }
 
+  const connectTool = async (slug:string)=>{
+    const result = await axios.post('/api/agent/tools/connect',{
+      agentId : agentConfig?.agentId??'',
+      toolSlug:slug
+    })
+    window.open(result?.data?.redirectUrl);
+  }
+
+  const disconnectTool = async (slug:string)=>{
+    setDisconnectToolLoading(true)
+    const result = await axios.delete('/api/agent/tools/connect',{
+     data:{
+       toolSlug:slug,
+       agentId:agentConfig?.agentId
+     }
+    })
+    if(result.data.error){
+      toast.add({
+        type:'error',
+        title:result.data.error
+      })
+          setDisconnectToolLoading(false)
+      return;
+    }
+
+    toast.add({
+      type:'success',
+      title:'Tool Disconnected!'
+    })
+    setDisconnectToolLoading(false)
+    setOpen(false)
+  }
 
   if (!draftAgent) {
     return ( 
@@ -638,8 +692,51 @@ return;
 
                 <div className="rounded-2xl border bg-slate-50 p-4">
                   <p className="text-sm text-muted-foreground">
-                    0 of 0 connected
+                   {ConnectedTools.length} of {" "}
+                   {tools.length} connected  
                   </p>
+                </div>
+
+                <div className="space-y-2">
+                  {loadingTools && 
+                  <div className="p-2 border rounded-2xl flex items-center">
+                    <Loader2Icon className="animate-spin"/> Loading Tools...
+                  </div>
+                  }
+                  {tools.map((tool,index)=>(
+                    <div key={`${tool.name}-${index}`} className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                      <div className="flex size-9 items-center justify-center rounded-2xl">
+                        {/* {tool.connected ? (
+                          <Link2 className="size-4 text-emerald-700"/>
+                        ) : (
+                          <Unlink className="size-4 text-muted-foreground"/>
+                        )} */}
+                        <img src={tool.logo} alt={tool.name} width={30} height={30} className="rounded-lg"/>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">
+                          {tool.name}
+                        </p>
+                        <p className={`text-xs ${tool.connected} ? "text-emerald-600" : "text-muted-foreground"`}>
+                          {tool.connected 
+                          ? <span className="text-green-500">Connected</span>
+                          : <span className="text-red-500">Not Connected</span>
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  <Button 
+                  onClick={()=>tool.connected ? disconnectTool(tool.slug) : connectTool(tool.slug)}
+                  type="button" variant={tool.connected ? "outline" : "default"} size='sm' disabled={disconnectToolLoading}>
+                    {disconnectToolLoading && <Loader2 className="animate-spin"/>}
+                          {tool.connected
+                          ? "Disconnect"
+                          : "Connect"
+                          }
+                  </Button>
+                    </div>
+                  ))}
                 </div>
 
               </section>
