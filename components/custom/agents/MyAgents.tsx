@@ -12,15 +12,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from '@/components/ui/button'
-import {  CalendarClockIcon, Ellipsis, Pause, Pencil, Play, Trash } from 'lucide-react'
+import {  CalendarClockIcon, Ellipsis, MessageCircle, Pause, Pencil, Play, Trash } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import AgentEditSheet from './AgentEditSheet'
+import AgentChatDrawer from './AgentChatDrawer'
 
 export default function MyAgents() {
 
     const [myAgents,setMyAgents] = useState<CreatedAgentType[] | null>()
     const [openEditAgentSheet,setOpenEditAgentSheet]  = useState(false)
     const [selectedEditAgent,setSelectedEditAgent] = useState<CreatedAgentType | null>(null)
+    const [openChatDrawer,setOpenChatDrawer] = useState(false)
 
     useEffect(()=>{
         AllUsersAgent()
@@ -80,9 +82,14 @@ const AllUsersAgent = async ()=>{
                     </p>
             </div>
             <Separator className={'my-3'}/>
-            <Button className={'bg-purple-700 w-full mt-2 '}>
+            <div className='flex items-center gap-2.5 w-full'>
+            <Button variant={'outline'} className={'flex-1 mt-2 '}>
                 <Play/> Run Agent
             </Button>
+            <Button onClick={()=>{setOpenChatDrawer(true);setSelectedEditAgent(agent)}} className={'bg-purple-700 flex-1 mt-2 '}>
+                <MessageCircle/> Chat With Agent
+            </Button>
+            </div>
             </div>
       
         </div>
@@ -91,6 +98,12 @@ const AllUsersAgent = async ()=>{
                 openSheet_={openEditAgentSheet}
                 closeSheet={(v:boolean)=>setOpenEditAgentSheet(v)}
                 />}
+
+            <AgentChatDrawer
+            agent={selectedEditAgent}
+            open={openChatDrawer}
+            onOpenChange={setOpenChatDrawer}
+            />
       </div>
     </div>
   )
