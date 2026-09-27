@@ -4,6 +4,9 @@ import { currentUser } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
+export const runtime = "nodejs";
+export const maxDuration=300;
+
 export async function POST(req:NextRequest){
     const user = await currentUser();
     const {agentConfig,agentId, input} = await req.json();
