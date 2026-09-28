@@ -2,13 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import {GoogleGenAI, ThinkingLevel} from '@google/genai'
 import { AgentConfigSystemPrompt } from "@/data/Prompt";
 import { AgentConfigRespSchema } from "@/data/ResponseSchema";
-import { AgentConfig, db, tools } from "@/db";
+import { AgentConfig, AgentRun, db, tools } from "@/db";
 import { currentUser } from "@clerk/nextjs/server";
 import { desc, eq } from "drizzle-orm";
+import { calculateNextDailyRun } from "@/lib/agent-schedule";
 
 export async function POST(req:NextRequest){
-    const {prompt} = await req.json();
+    const {prompt, timezone} = await req.json();
     const user = await currentUser();
+    const userEmail = user?.primaryEmailAddress?.emailAddress;
+    if(!userEmail){
+        return NextResponse.json({error:'User email is required'},{status:400})
+    }
     if(!prompt.trim()){
         return NextResponse.json({error:'Prompt is required'},{status:400})
     }
@@ -39,9 +44,35 @@ export async function POST(req:NextRequest){
                 ...aiOutput.config,
                 agentImage:'https://api.dicebear.com/10.x/bottts/svg?seed='+agentId,
                 agentId:agentId,
-                userEmail:user?.primaryEmailAddress?.emailAddress
+                userEmail,
+               schedule:{
+                time:aiOutput?.config?.schedule.time,
+                type:aiOutput?.config?.schedule.type,
+                frequency:aiOutput?.config?.schedule.frequency,
+                 timezone:timezone
+               }
             }).returning();
-             return NextResponse.json({...dbResult[0],status_:'ready'});
+
+            // Generate the first run only after the agent has been saved.
+            const schedule = aiOutput?.config?.schedule
+            const firstRun = schedule?.type === 'recurring' && schedule.frequency === 'daily'
+                ? calculateNextDailyRun({
+                    time: schedule.time,
+                    timezone,
+                })
+                : null
+
+            if (firstRun) {
+                await db.insert(AgentRun).values({
+                    agentId,
+                    userEmail,
+                    scheduledFor: firstRun,
+                    timezone,
+                    status: 'scheduled',
+                }).returning()
+            }
+
+            return NextResponse.json({...dbResult[0],status_:'ready'});
         }
 
         return NextResponse.json(JSON.parse(response.text??'{}'));

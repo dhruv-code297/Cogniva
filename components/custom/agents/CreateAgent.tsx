@@ -95,7 +95,8 @@ export type CreatedAgentType = {
 export type AgentSchedule= {
   type: "once" | "recurring" | "manual"
   frequency?: "hourly" | "daily" | "weekly" | "monthly"
-  time?:string
+  time?:string,
+  timezone?:string
 }
 
 export default function CreateAgent() {
@@ -107,10 +108,16 @@ export default function CreateAgent() {
 
      const [createdAgent,setCreatedAgent] = useState<CreatedAgentType | null>(null)
 
+     const getBrowserTimezone = ()=>{
+      return (Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC")
+     }
+
     const onSubmit = async ()=>{
       setLoading(true)
+      const timezone = getBrowserTimezone()
       const result = await axios.post('/api/agent/configure',{
-        prompt:prompt
+        prompt:prompt,
+        timezone:timezone
       })
       console.log(result.data);
       setConfigResult(result.data);
@@ -125,7 +132,8 @@ export default function CreateAgent() {
     setConfigResult(null)
     const updatedPrompt = prompt+"/n"+JSON.stringify(ans);
      const result = await axios.post('/api/agent/configure',{
-        prompt:updatedPrompt
+        prompt:updatedPrompt,
+        timezone:getBrowserTimezone()
       })
       console.log(result.data);
       setConfigResult(result.data);

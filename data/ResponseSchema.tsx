@@ -75,7 +75,7 @@ export const AgentConfigRespSchema = {
           properties: {
             type: {
               type: Type.STRING,
-              enum: ["once", "recurring"],
+              enum: ["once", "recurring","manual"],
             },
 
             frequency: { type: Type.STRING },
