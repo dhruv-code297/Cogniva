@@ -1,5 +1,6 @@
 "use client"
 import { UserDetailContext } from '@/context/UserDetailContext';
+import { useUser } from '@clerk/nextjs';
 import axios from 'axios';
 import React, { useEffect, useState } from 'react'
 
@@ -10,14 +11,21 @@ function Provider ({
 }>)  {
 
 const [userDetail,setUserDetail] = useState()
+const { isLoaded, isSignedIn } = useUser();
 
 useEffect(()=>{
-    createNewUser();
-},[])
+    if (isLoaded && isSignedIn) {
+      createNewUser();
+    }
+},[isLoaded, isSignedIn])
 
     const createNewUser = async ()=>{
-      const result  = await axios.post('/api/users')
-      setUserDetail(result.data)
+      try {
+        const result = await axios.post('/api/users')
+        setUserDetail(result.data)
+      } catch (error) {
+        console.error('Failed to load the current user', error)
+      }
     }
   return (
     <div>

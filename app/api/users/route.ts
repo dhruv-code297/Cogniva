@@ -5,15 +5,19 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req:NextRequest){
     const user = await currentUser();
+    if (!user?.primaryEmailAddress?.emailAddress) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     //if user exists in db
-    const userResult = await db.select().from(users).where(eq(users.email,user?.primaryEmailAddress?.emailAddress??''))
+    const userResult = await db.select().from(users).where(eq(users.email,user.primaryEmailAddress.emailAddress))
     //if no user then insert new user
     if(userResult.length==0){
         const result = await db.insert(users).values({
             name:user?.fullName,
-            email:user?.primaryEmailAddress?.emailAddress??'',
+            email:user.primaryEmailAddress.emailAddress,
         }).returning()
-        return NextResponse.json(result);
+        return NextResponse.json(result[0]);
     }
     return NextResponse.json(userResult[0]);
 

@@ -8,7 +8,7 @@ import { inngest } from "./client";
 export const ProcessScheduledAgent = inngest.createFunction(
   {
     id: "process-scheduled-agent-runs",
-    triggers: [{ cron: "*/15 * * * *" }],
+    triggers: [{ cron: "*/10000 * * * *" }],
     // Run this scheduler every 15 minutes to pick pending agent jobs.
   },
   async ({ step }) => {

@@ -4,7 +4,7 @@ import { AgentConfigSystemPrompt } from "@/data/Prompt";
 import { AgentConfigRespSchema } from "@/data/ResponseSchema";
 import { AgentConfig, AgentRun, db, tools } from "@/db";
 import { currentUser } from "@clerk/nextjs/server";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { calculateNextDailyRun } from "@/lib/agent-schedule";
 
 export async function POST(req:NextRequest){
@@ -27,7 +27,7 @@ export async function POST(req:NextRequest){
 
         const ai = new GoogleGenAI({apiKey});
         const response  = await ai.models.generateContent({
-            model:'gemini-3.5-flash',
+            model:'gemini-3.6-flash',
             contents:AgentConfigSystemPrompt.replace('{USER_PROMPT}',prompt).replace('{AVAILABLE_TOOLS}',aiTools.toString()),
             config:{
                 thinkingConfig:{thinkingLevel:ThinkingLevel.LOW},
@@ -91,6 +91,27 @@ export async function PUT(req:NextRequest){
          createdAt: new Date()
      }).where(eq(AgentConfig.agentId,agentConfig?.agentId))
      .returning()
+
+     //update agent run 
+     const deleteScheduledAgentRun = await db.delete(AgentRun)
+     .where(and(eq(AgentRun.agentId,agentConfig?.agentId),eq(AgentRun.status,'scheduled')))
+
+     //schedule next/run
+     if(agentConfig?.status=='active'){
+       const nextRun = calculateNextDailyRun({time:agentConfig?.schedule.time,
+        timezone:agentConfig?.timeZone});
+
+         await db
+                .insert(AgentRun)
+                .values({
+                  agentId: agentConfig.agentId,
+                  userEmail: agentConfig.userEmail,
+                  scheduledFor: nextRun,
+                  timezone:agentConfig?.schedule.timezone,
+                  status: "scheduled",
+                })
+                .onConflictDoNothing();
+     }
  
      return NextResponse.json(result[0]);
    } catch (e) {
@@ -104,4 +125,18 @@ export async function GET(req:NextRequest){
     const result  = await db.select().from(AgentConfig).where(eq(AgentConfig.userEmail,user?.primaryEmailAddress?.emailAddress??'')).
     orderBy(desc(AgentConfig?.createdAt))
     return NextResponse.json(result);
+}
+
+export async function DELETE(req:NextRequest){
+    const {agentId} = await req.json();
+try {
+    
+        const deleteAgentRun = await db.delete(AgentRun).where(and(eq(AgentRun.agentId,agentId),eq(AgentRun.status,'scheduled')))
+
+        const deleteAgentConfig = await db.delete(AgentConfig).where(eq(AgentConfig.agentId,agentId));
+    
+        return NextResponse.json({msg:'Agent Deleted!'},{status:200})
+} catch (e) {
+    return NextResponse.json({error:'Internal Server Error'},{status:400})
+}
 }
