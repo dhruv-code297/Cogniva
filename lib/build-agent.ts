@@ -40,7 +40,7 @@ export async function buildAgent(agentConfig:CreatedAgentType,
 
     return new Agent({
         name:agentConfig.name,
-        model:process.env.OPENAI_MODEL,
+        model:process.env.OPENAI_MODEL || "gpt-4o-mini",
         instructions,
         tools:[...composioTools,browserbaseResearchTool]
     })

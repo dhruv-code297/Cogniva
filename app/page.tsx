@@ -1,121 +1,47 @@
-import { UserButton } from '@clerk/nextjs';
-import React from 'react';
+import React from "react";
+import { LandingNav } from "@/components/landing/LandingNav";
+import { HeroSection } from "@/components/landing/HeroSection";
+import { FeatureCards } from "@/components/landing/FeatureCards";
+import { AgentShowcaseSection } from "@/components/landing/AgentShowcaseSection";
+import { IntegrationsSection } from "@/components/landing/IntegrationsSection";
+import { ControlSection } from "@/components/landing/ControlSection";
+import { PricingSection } from "@/components/landing/PricingSection";
+import { FaqSection } from "@/components/landing/FaqSection";
+import { CtaBanner } from "@/components/landing/CtaBanner";
+import { LandingFooter } from "@/components/landing/LandingFooter";
 
 export default function Home() {
   return (
-    <div>
-      <UserButton/>
-    </div>
+    <main className="min-h-screen cogniva-grid-bg text-slate-900 selection:bg-emerald-100 selection:text-emerald-900 flex flex-col antialiased">
+      {/* Navigation Header with Open dashboard pill button (no sign in button) */}
+      <LandingNav />
+
+      {/* Main Hero Section matching user reference screenshot with live agent command widget */}
+      <HeroSection />
+
+      {/* Feature Cards Trio matching user reference screenshot */}
+      <FeatureCards />
+
+      {/* Real Pre-Built Agent Templates Showcase */}
+      <AgentShowcaseSection />
+
+      {/* Native Integrations Ecosystem */}
+      <IntegrationsSection />
+
+      {/* Operational Safety, Guardrails & Human-in-the-Loop */}
+      <ControlSection />
+
+      {/* Transparent Predictable Pricing */}
+      <PricingSection />
+
+      {/* Frequently Asked Questions */}
+      <FaqSection />
+
+      {/* Bottom CTA Banner matching user reference screenshot */}
+      <CtaBanner />
+
+      {/* Landing Footer */}
+      <LandingFooter />
+    </main>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#09090b',
-    color: '#fafafa',
-    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif",
-    padding: '2rem',
-    boxSizing: 'border-box',
-  },
-  hero: {
-    textAlign: 'center',
-    maxWidth: '800px',
-    marginBottom: '4rem',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  badge: {
-    display: 'inline-block',
-    padding: '0.5rem 1rem',
-    borderRadius: '9999px',
-    backgroundColor: '#27272a',
-    fontSize: '0.875rem',
-    fontWeight: 500,
-    color: '#38bdf8',
-    marginBottom: '1.5rem',
-    border: '1px solid #3f3f46',
-  },
-  title: {
-    fontSize: '3rem',
-    fontWeight: 800,
-    letterSpacing: '-0.025em',
-    lineHeight: 1.2,
-    margin: '0 0 1rem 0',
-  },
-  gradient: {
-    background: 'linear-gradient(to right, #38bdf8, #818cf8, #c084fc)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-  },
-  subtitle: {
-    fontSize: '1.125rem',
-    color: '#a1a1aa',
-    lineHeight: 1.6,
-    margin: '0 0 2rem 0',
-    maxWidth: '600px',
-  },
-  ctaGroup: {
-    display: 'flex',
-    gap: '1rem',
-  },
-  primaryCta: {
-    padding: '0.75rem 1.5rem',
-    borderRadius: '8px',
-    backgroundColor: '#38bdf8',
-    color: '#09090b',
-    fontWeight: 600,
-    textDecoration: 'none',
-    transition: 'opacity 0.2s',
-  },
-  secondaryCta: {
-    padding: '0.75rem 1.5rem',
-    borderRadius: '8px',
-    backgroundColor: 'transparent',
-    color: '#fafafa',
-    fontWeight: 600,
-    textDecoration: 'none',
-    border: '1px solid #3f3f46',
-    transition: 'background-color 0.2s',
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-    gap: '2rem',
-    width: '100%',
-    maxWidth: '1000px',
-    marginBottom: '4rem',
-  },
-  card: {
-    backgroundColor: '#18181b',
-    border: '1px solid #27272a',
-    borderRadius: '12px',
-    padding: '1.5rem',
-    transition: 'transform 0.2s, border-color 0.2s',
-  },
-  icon: {
-    fontSize: '2rem',
-    marginBottom: '1rem',
-  },
-  cardTitle: {
-    fontSize: '1.25rem',
-    fontWeight: 600,
-    margin: '0 0 0.5rem 0',
-  },
-  cardText: {
-    fontSize: '0.875rem',
-    color: '#a1a1aa',
-    lineHeight: 1.5,
-    margin: 0,
-  },
-  footer: {
-    fontSize: '0.875rem',
-    color: '#71717a',
-    marginTop: 'auto',
-  },
-};

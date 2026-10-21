@@ -1,23 +1,19 @@
-"use client"
+"use client";
 
-import React, { FormEvent, useEffect, useState } from "react"
+import React, { FormEvent, useEffect, useState } from "react";
 import {
   CalendarClock,
   Clock3,
   FileText,
-  Link2,
   Loader2,
-  Loader2Icon,
   Plus,
   Save,
   Shuffle,
   Sparkles,
   Target,
-  Unlink,
   Wrench,
   X,
-} from "lucide-react"
-
+} from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -26,1005 +22,729 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet"
-
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-
-import { CreatedAgentType } from "./CreateAgent"
-import { toast } from "@/components/ui/toast"
-import axios from "axios"
-import Image from "next/image"
-
+} from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { CreatedAgentType } from "./CreateAgent";
+import { toast } from "@/components/ui/toast";
+import axios from "axios";
 
 type Props = {
-  children?: React.ReactNode
-  agentConfig: CreatedAgentType | null
-  setUpdatedAgent:any ,
-  openSheet_?:boolean,
-  closeSheet?:any
-}
+  children?: React.ReactNode;
+  agentConfig: CreatedAgentType | null;
+  setUpdatedAgent: any;
+  openSheet_?: boolean;
+  closeSheet?: any;
+};
 
-
-type ScheduleType = "once" | "recurring"
-
+type ScheduleType = "once" | "recurring";
 
 type AgentSchedule = {
-  type: ScheduleType
-  frequency: string
-  time: string
-}
-
-
-type Tool = {
-  id?: string
-  slug?: string
-  name?: string
-  icon?: string
-}
+  type: ScheduleType;
+  frequency: string;
+  time: string;
+  timezone?: string;
+};
 
 type EditableTool = {
-  name:string,
-  connected:boolean,
-  slug:string,
-  logo:string,
-}
+  name: string;
+  connected: boolean;
+  slug: string;
+  logo: string;
+};
 
-
-const FREQUENCY_OPTIONS = [
-  "Daily",
-  "Weekly",
-  "Monthly",
-]
-
+const FREQUENCY_OPTIONS = ["Daily", "Weekly", "Monthly"];
 
 export default function AgentEditSheet({
   children,
   agentConfig,
-    setUpdatedAgent,
-    openSheet_=false,
-    closeSheet
+  setUpdatedAgent,
+  openSheet_ = false,
+  closeSheet,
 }: Props) {
-
-  const [open, setOpen] = useState(openSheet_)
-
-  const [draftAgent, setDraftAgent] =
-    useState<CreatedAgentType | null>(agentConfig)
-
-    const [tools,setTools] = useState<EditableTool[]>([])
-
-    const [loadingTools,setLoadingTools] = useState(false)
-
-    const [disconnectToolLoading,setDisconnectToolLoading] = useState(false)
-
-
-  const [skillInput, setSkillInput] =
-    useState("")
+  const [open, setOpen] = useState(openSheet_);
+  const [draftAgent, setDraftAgent] = useState<CreatedAgentType | null>(agentConfig);
+  const [tools, setTools] = useState<EditableTool[]>([]);
+  const [loadingTools, setLoadingTools] = useState(false);
+  const [disconnectToolLoading, setDisconnectToolLoading] = useState(false);
+  const [skillInput, setSkillInput] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleOpenChange = (value: boolean) => {
-    setOpen(value)
-    closeSheet?.(value)
-  }
+    setOpen(value);
+    closeSheet?.(value);
+  };
 
   useEffect(() => {
-    setDraftAgent(agentConfig)
-    agentConfig&&GetTools()
-  }, [agentConfig])
+    setOpen(openSheet_);
+  }, [openSheet_]);
 
+  useEffect(() => {
+    setDraftAgent(agentConfig);
+    if (agentConfig) GetTools();
+  }, [agentConfig]);
 
   const ShuffleImage = () => {
-    const randomSeed = crypto.randomUUID()
-
-    const newImage =
-      "https://api.dicebear.com/10.x/bottts/svg?seed=" +
-      randomSeed
+    const randomSeed = crypto.randomUUID();
+    const newImage = "https://api.dicebear.com/10.x/bottts/svg?seed=" + randomSeed;
 
     setDraftAgent((prev) => {
-
-      if (!prev) return prev
-
+      if (!prev) return prev;
       return {
         ...prev,
         agentImage: newImage,
-      }
-    })
-  }
+      };
+    });
+  };
 
-
-  const updateDraft = (
-    key: keyof CreatedAgentType,
-    value: any
-  ) => {
-
+  const updateDraft = (key: keyof CreatedAgentType, value: any) => {
     setDraftAgent((prev) => {
-
-      if (!prev) return prev
-
+      if (!prev) return prev;
       return {
         ...prev,
         [key]: value,
-      }
-    })
-  }
-
+      };
+    });
+  };
 
   const getSchedule = (): AgentSchedule => {
-
-    const schedule = draftAgent?.schedule as AgentSchedule | undefined
+    const schedule = draftAgent?.schedule as (AgentSchedule & { timezone?: string }) | undefined;
 
     return {
-      type: schedule?.type || "once",
+      type: (schedule?.type as ScheduleType) || "once",
       frequency: schedule?.frequency || "Daily",
       time: schedule?.time || "09:00",
-    }
-  }
+      timezone:
+        schedule?.timezone ||
+        (typeof window !== "undefined"
+          ? Intl.DateTimeFormat().resolvedOptions().timeZone
+          : "UTC"),
+    };
+  };
 
-
-  const updateSchedule = (
-    key: keyof AgentSchedule,
-    value: string
-  ) => {
-
-    const schedule = getSchedule()
-
+  const updateSchedule = (key: keyof AgentSchedule, value: string) => {
+    const schedule = getSchedule();
     updateDraft("schedule", {
       ...schedule,
       [key]: value,
-    })
-  }
+    });
+  };
 
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    try {
+      setIsSubmitting(true);
+      const currentSchedule = getSchedule();
+      const payload = {
+        ...draftAgent,
+        schedule: currentSchedule,
+      };
 
-  const handleSubmit =async (event:any)=>{
-    event.preventDefault()
-    const result  = await axios.put('/api/agent/configure',{
-      ...draftAgent
-    })
-    if(result.data?.error){
+      const result = await axios.put("/api/agent/configure", payload);
+      if (result.data?.error) {
         toast.add({
-      type:"error",
-  title: result.data?.error,
-})
-return;
+          type: "error",
+          title: result.data?.error,
+        });
+        return;
+      }
+      try {
+        await setUpdatedAgent?.(payload);
+      } catch (err) {
+        console.error("Error updating agent in parent:", err);
+      }
+      toast.add({
+        type: "success",
+        title: "Agent updated successfully",
+      });
+      handleOpenChange(false);
+    } catch (error: any) {
+      console.error("Failed to update agent:", error);
+      const errMsg =
+        error?.response?.data?.error || error?.message || "Failed to update agent";
+      toast.add({
+        type: "error",
+        title: typeof errMsg === "string" ? errMsg : "Failed to update agent",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    setUpdatedAgent(draftAgent)
-    toast.add({
-      type:"success",
-  title: "Agent Updated!",
-})
-  handleOpenChange(false)
-  }
-
-
+  };
 
   const addSkill = () => {
-
-    const skill = skillInput.trim()
-
-    if (!skill) return
+    const skill = skillInput.trim();
+    if (!skill) return;
 
     if (
       draftAgent?.skills?.some(
-        (item) =>
-          item.toLowerCase() === skill.toLowerCase()
+        (item) => item.toLowerCase() === skill.toLowerCase()
       )
     ) {
-      setSkillInput("")
-      return
-    }
-
-    updateDraft("skills", [
-      ...(draftAgent?.skills || []),
-      skill,
-    ])
-
-    setSkillInput("")
-  }
-
-
-  const removeSkill = (skill: string) => {
-
-    updateDraft(
-      "skills",
-      (draftAgent?.skills || []).filter(
-        (item) => item !== skill
-      )
-    )
-  }
-
-  //get tools
-  const GetTools = async ()=>{
-    setLoadingTools(true)
-    const result = await axios.get('/api/agent/tools?agentId='+agentConfig?.agentId)
-    setTools(result.data)
-    setLoadingTools(false)
-  }
-
-  const ConnectedTools = tools.filter(tool=>tool.connected==true)
-
-  const handleSkillKeyDown = (
-    event: React.KeyboardEvent<HTMLInputElement>
-  ) => {
-
-    if (event.key === "Enter") {
-
-      event.preventDefault()
-
-      addSkill()
-    }
-  }
-
-  const connectTool = async (slug:string)=>{
-    const result = await axios.post('/api/agent/tools/connect',{
-      agentId : agentConfig?.agentId??'',
-      toolSlug:slug
-    })
-    window.open(result?.data?.redirectUrl);
-  }
-
-  const disconnectTool = async (slug:string)=>{
-    setDisconnectToolLoading(true)
-    const result = await axios.delete('/api/agent/tools/connect',{
-     data:{
-       toolSlug:slug,
-       agentId:agentConfig?.agentId
-     }
-    })
-    if(result.data.error){
-      toast.add({
-        type:'error',
-        title:result.data.error
-      })
-          setDisconnectToolLoading(false)
+      setSkillInput("");
       return;
     }
 
-    toast.add({
-      type:'success',
-      title:'Tool Disconnected!'
-    })
-    setDisconnectToolLoading(false)
-    setOpen(false)
-  }
+    updateDraft("skills", [...(draftAgent?.skills || []), skill]);
+    setSkillInput("");
+  };
+
+  const removeSkill = (skill: string) => {
+    updateDraft(
+      "skills",
+      (draftAgent?.skills || []).filter((item) => item !== skill)
+    );
+  };
+
+  const GetTools = async () => {
+    setLoadingTools(true);
+    try {
+      const result = await axios.get("/api/agent/tools?agentId=" + agentConfig?.agentId);
+      setTools(Array.isArray(result.data) ? result.data : []);
+    } catch (err) {
+      console.error("Error loading tools:", err);
+    } finally {
+      setLoadingTools(false);
+    }
+  };
+
+  const ConnectedTools = tools.filter((tool) => tool.connected === true);
+
+  const handleSkillKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addSkill();
+    }
+  };
+
+  const connectTool = async (slug: string) => {
+    try {
+      const result = await axios.post("/api/agent/tools/connect", {
+        agentId: agentConfig?.agentId ?? "",
+        toolSlug: slug,
+      });
+      if (result?.data?.redirectUrl) {
+        window.open(result.data.redirectUrl, "_blank");
+      }
+    } catch (err: any) {
+      toast.add({
+        type: "error",
+        title: err?.response?.data?.error || "Could not connect tool",
+      });
+    }
+  };
+
+  const disconnectTool = async (slug: string) => {
+    setDisconnectToolLoading(true);
+    try {
+      const result = await axios.delete("/api/agent/tools/connect", {
+        data: {
+          toolSlug: slug,
+          agentId: agentConfig?.agentId,
+        },
+      });
+      if (result.data.error) {
+        toast.add({
+          type: "error",
+          title: result.data.error,
+        });
+        return;
+      }
+
+      toast.add({
+        type: "success",
+        title: "Tool disconnected",
+      });
+      await GetTools();
+    } catch (err: any) {
+      toast.add({
+        type: "error",
+        title: err?.response?.data?.error || "Failed to disconnect tool",
+      });
+    } finally {
+      setDisconnectToolLoading(false);
+    }
+  };
 
   if (!draftAgent) {
-    return ( 
-      <Sheet open={open} onOpenChange={(v:boolean)=>{setOpen(v);closeSheet(v)}}>
-        <SheetTrigger>
-          {children}
-        </SheetTrigger>
-
-        <SheetContent>
+    return (
+      <Sheet open={open} onOpenChange={(v: boolean) => { setOpen(v); closeSheet?.(v); }}>
+        <SheetTrigger>{children}</SheetTrigger>
+        <SheetContent className="bg-white border-l border-slate-200">
           <div className="flex h-full items-center justify-center">
-            <p className="text-sm text-muted-foreground">
-              Agent not found.
-            </p>
+            <p className="text-sm text-slate-500">Agent not found.</p>
           </div>
         </SheetContent>
       </Sheet>
-    )
+    );
   }
 
-
-  const schedule = getSchedule()
-
+  const schedule = getSchedule();
 
   return (
-    <Sheet
-      open={open}
-      onOpenChange={handleOpenChange}
-    >
-
-      <SheetTrigger>
-        {children}
-      </SheetTrigger>
-
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetTrigger>{children}</SheetTrigger>
 
       <SheetContent
         side="right"
-        className="w-full sm:max-w-xl p-0"
+        className="w-full sm:max-w-xl p-0 bg-white border-l border-slate-200/90 shadow-xl"
       >
-
-        <form
-          onSubmit={handleSubmit}
-          className="flex h-full min-h-0 flex-col"
-        >
-
-          {/* -------------------------------------------------------------- */}
-          {/* HEADER */}
-          {/* -------------------------------------------------------------- */}
-
-          <SheetHeader className="border-b px-6 py-5">
-
+        <form onSubmit={handleSubmit} className="flex h-full min-h-0 flex-col">
+          {/* Header */}
+          <SheetHeader className="border-b border-slate-100 bg-white px-6 py-5 pr-14">
             <div className="flex items-center gap-3">
-
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-100">
-
-                <Sparkles
-                  className="h-6 w-6 text-violet-600"
-                />
-
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-900 border border-slate-200/80 shadow-2xs">
+                <Sparkles className="size-5" />
               </div>
-
 
               <div className="min-w-0">
-
-                <SheetTitle className="text-lg">
-                  Edit Agent
+                <SheetTitle className="text-base font-bold text-slate-950">
+                  Edit Agent Configuration
                 </SheetTitle>
-
-                <SheetDescription>
-                  Update how this agent looks, works, and runs.
+                <SheetDescription className="text-xs text-slate-500 font-normal">
+                  Update instructions, objectives, tool access, and schedule cadences.
                 </SheetDescription>
-
               </div>
-
             </div>
-
           </SheetHeader>
 
-
-          {/* -------------------------------------------------------------- */}
-          {/* CONTENT */}
-          {/* -------------------------------------------------------------- */}
-
+          {/* Form Content */}
           <ScrollArea className="min-h-0 flex-1">
-
             <div className="space-y-6 px-6 py-6">
-
-
-              {/* ---------------------------------------------------------- */}
-              {/* AGENT IMAGE */}
-              {/* ---------------------------------------------------------- */}
-
-              <section className="rounded-2xl border bg-slate-50 p-4">
-
+              {/* Agent Image */}
+              <section className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4">
                 <div className="flex items-center gap-4">
-
-                  <img
-                    src={draftAgent.agentImage}
-                    alt={draftAgent.name || "Agent"}
-                    width={80}
-                    height={80}
-                    className="h-20 w-20 rounded-2xl border bg-white p-2"
-                  />
-
-
-                  <div className="min-w-0 flex-1">
-
-                    <p className="font-medium text-slate-900">
-                      Agent Image
-                    </p>
-
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Shuffle to generate a new look.
-                    </p>
-
-
-                    <Button
-                      type="button"
-                      onClick={ShuffleImage}
-                      variant="outline"
-                      size="sm"
-                      className="mt-3 gap-2"
-                    >
-
-                      <Shuffle className="h-4 w-4" />
-
-                      Shuffle Image
-
-                    </Button>
-
+                  <div className="size-20 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-2xs">
+                    <img
+                      src={draftAgent.agentImage}
+                      alt={draftAgent.name || "Agent"}
+                      className="size-full object-cover"
+                    />
                   </div>
 
-                </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-slate-950">Agent Avatar</p>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      Generate a new procedural visual identifier.
+                    </p>
 
+                    <button
+                      type="button"
+                      onClick={ShuffleImage}
+                      className="cog-secondary-button mt-3 text-xs"
+                    >
+                      <Shuffle className="size-3.5" />
+                      <span>Shuffle Avatar</span>
+                    </button>
+                  </div>
+                </div>
               </section>
 
-
-              {/* ---------------------------------------------------------- */}
-              {/* BASIC INFORMATION */}
-              {/* ---------------------------------------------------------- */}
-
-              <section className="space-y-5">
-
+              {/* Basic Information */}
+              <section className="space-y-4">
                 <SectionTitle
-                  icon={<Sparkles className="h-4 w-4" />}
+                  icon={<Sparkles className="size-4" />}
                   title="Basic Information"
                 />
 
-
-                <div className="space-y-2">
-
+                <div className="space-y-1.5">
                   <label
                     htmlFor="agent-name"
-                    className="text-sm font-medium text-slate-700"
+                    className="block text-xs font-semibold text-slate-700"
                   >
                     Agent Name
                   </label>
-
-                  <Input
+                  <input
                     id="agent-name"
                     value={draftAgent.name || ""}
-                    onChange={(event) =>
-                      updateDraft(
-                        "name",
-                        event.target.value
-                      )
-                    }
-                    placeholder="Give your agent a name"
+                    onChange={(event) => updateDraft("name", event.target.value)}
+                    placeholder="e.g. Inbox Scout"
+                    className="w-full bg-slate-50 border border-slate-200/90 rounded-xl px-3.5 py-2.5 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-950/10 focus:border-slate-900 transition-all"
                     required
                   />
-
                 </div>
 
-
-                <div className="space-y-2">
-
+                <div className="space-y-1.5">
                   <label
                     htmlFor="agent-description"
-                    className="text-sm font-medium text-slate-700"
+                    className="block text-xs font-semibold text-slate-700"
                   >
                     Description
                   </label>
-
-                  <Textarea
+                  <textarea
                     id="agent-description"
-                    value={
-                      draftAgent.description || ""
-                    }
-                    onChange={(event) =>
-                      updateDraft(
-                        "description",
-                        event.target.value
-                      )
-                    }
+                    value={draftAgent.description || ""}
+                    onChange={(event) => updateDraft("description", event.target.value)}
                     placeholder="Briefly describe what this agent does."
-                    rows={3}
+                    rows={2}
+                    className="w-full bg-slate-50 border border-slate-200/90 rounded-xl p-3 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-950/10 focus:border-slate-900 transition-all resize-y leading-relaxed"
                     required
                   />
-
                 </div>
-
               </section>
 
-
-              {/* ---------------------------------------------------------- */}
-              {/* OBJECTIVE */}
-              {/* ---------------------------------------------------------- */}
-
+              {/* Objective */}
               <section className="space-y-4">
-
                 <SectionTitle
-                  icon={<Target className="h-4 w-4" />}
-                  title="Objective"
+                  icon={<Target className="size-4" />}
+                  title="Primary Objective"
                 />
 
-
-                <div className="space-y-2">
-
+                <div className="space-y-1.5">
                   <label
                     htmlFor="agent-objective"
-                    className="text-sm font-medium text-slate-700"
+                    className="block text-xs font-semibold text-slate-700"
                   >
                     What should this agent achieve?
                   </label>
-
-                  <Textarea
+                  <textarea
                     id="agent-objective"
-                    value={
-                      draftAgent.objective || ""
-                    }
-                    onChange={(event) =>
-                      updateDraft(
-                        "objective",
-                        event.target.value
-                      )
-                    }
-                    placeholder="Define the main goal of your agent."
-                    rows={4}
+                    value={draftAgent.objective || ""}
+                    onChange={(event) => updateDraft("objective", event.target.value)}
+                    placeholder="Define the core objective and deliverables of your agent."
+                    rows={3}
+                    className="w-full bg-slate-50 border border-slate-200/90 rounded-xl p-3 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-950/10 focus:border-slate-900 transition-all resize-y leading-relaxed"
                     required
                   />
-
                 </div>
-
               </section>
 
-
-              {/* ---------------------------------------------------------- */}
-              {/* INSTRUCTIONS */}
-              {/* ---------------------------------------------------------- */}
-
+              {/* Instructions */}
               <section className="space-y-4">
-
                 <SectionTitle
-                  icon={<FileText className="h-4 w-4" />}
-                  title="Instructions"
+                  icon={<FileText className="size-4" />}
+                  title="Instructions & Rules"
                 />
 
-
-                <div className="space-y-2">
-
+                <div className="space-y-1.5">
                   <label
                     htmlFor="agent-instructions"
-                    className="text-sm font-medium text-slate-700"
+                    className="block text-xs font-semibold text-slate-700"
                   >
                     Agent Instructions
                   </label>
-
-                  <Textarea
+                  <textarea
                     id="agent-instructions"
-                    value={
-                      draftAgent.instructions || ""
-                    }
-                    onChange={(event) =>
-                      updateDraft(
-                        "instructions",
-                        event.target.value
-                      )
-                    }
-                    placeholder="Tell your agent how it should work."
-                    rows={6}
+                    value={draftAgent.instructions || ""}
+                    onChange={(event) => updateDraft("instructions", event.target.value)}
+                    placeholder="Step-by-step instructions guiding how the agent reasons and executes."
+                    rows={5}
+                    className="w-full bg-slate-50 border border-slate-200/90 rounded-xl p-3 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-950/10 focus:border-slate-900 transition-all resize-y leading-relaxed font-mono"
                     required
                   />
-
-                  <p className="text-xs text-muted-foreground">
-                    These instructions guide the agent when completing tasks.
+                  <p className="text-[11px] text-slate-400">
+                    These system guidelines dictate how the agent formats outputs and uses tools.
                   </p>
-
                 </div>
-
               </section>
 
-
-              {/* ---------------------------------------------------------- */}
-              {/* SKILLS */}
-              {/* ---------------------------------------------------------- */}
-
+              {/* Skills */}
               <section className="space-y-4">
-
                 <SectionTitle
-                  icon={<Sparkles className="h-4 w-4" />}
-                  title="Skills"
+                  icon={<Sparkles className="size-4" />}
+                  title="Skills & Tags"
                 />
-
 
                 <div className="space-y-3">
-
                   <div className="flex gap-2">
-
-                    <Input
+                    <input
                       value={skillInput}
-                      onChange={(event) =>
-                        setSkillInput(
-                          event.target.value
-                        )
-                      }
-                      onKeyDown={
-                        handleSkillKeyDown
-                      }
-                      placeholder="Add a skill"
+                      onChange={(event) => setSkillInput(event.target.value)}
+                      onKeyDown={handleSkillKeyDown}
+                      placeholder="Add a skill or tag..."
+                      className="flex-1 bg-slate-50 border border-slate-200/90 rounded-xl px-3.5 py-2 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-950/10 focus:border-slate-900 transition-all"
                     />
 
-                    <Button
+                    <button
                       type="button"
                       onClick={addSkill}
-                      size="icon"
-                      variant="outline"
                       disabled={!skillInput.trim()}
+                      className="cog-secondary-button px-3 cursor-pointer disabled:opacity-40"
                     >
-
-                      <Plus className="h-4 w-4" />
-
-                    </Button>
-
+                      <Plus className="size-3.5" />
+                      <span>Add</span>
+                    </button>
                   </div>
 
-
-                  {draftAgent.skills &&
-                    draftAgent.skills.length > 0 && (
-
-                      <div className="flex flex-wrap gap-2">
-
-                        {draftAgent.skills.map(
-                          (skill) => (
-
-                            <div
-                              key={skill}
-                              className="flex items-center gap-1.5 rounded-lg border bg-slate-50 px-3 py-1.5"
-                            >
-
-                              <span className="text-sm text-slate-700">
-                                {skill}
-                              </span>
-
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  removeSkill(
-                                    skill
-                                  )
-                                }
-                                className="rounded-md p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700"
-                              >
-
-                                <X className="h-3.5 w-3.5" />
-
-                              </button>
-
-                            </div>
-
-                          )
-                        )}
-
-                      </div>
-
-                    )}
-
-
-                  {(!draftAgent.skills ||
-                    draftAgent.skills.length === 0) && (
-
-                    <p className="text-xs text-muted-foreground">
-                      No skills added yet.
-                    </p>
-
+                  {draftAgent.skills && draftAgent.skills.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {draftAgent.skills.map((skill) => (
+                        <div
+                          key={skill}
+                          className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 shadow-2xs"
+                        >
+                          <span>{skill}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeSkill(skill)}
+                            className="rounded-full p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-800 transition-colors"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400">No skills assigned yet.</p>
                   )}
-
                 </div>
-
               </section>
 
-
-              {/* ---------------------------------------------------------- */}
-              {/* CONNECTED TOOLS */}
-              {/* ---------------------------------------------------------- */}
-
+              {/* Connected Tools */}
               <section className="space-y-4">
-
                 <SectionTitle
-                  icon={<Wrench className="h-4 w-4" />}
-                  title="Connected Tools"
+                  icon={<Wrench className="size-4" />}
+                  title="Tool Integrations"
                 />
 
-
-                <div className="rounded-2xl border bg-slate-50 p-4">
-                  <p className="text-sm text-muted-foreground">
-                   {ConnectedTools.length} of {" "}
-                   {tools.length} connected  
-                  </p>
+                <div className="rounded-xl border border-slate-200/90 bg-slate-50/70 p-3.5 flex items-center justify-between">
+                  <span className="text-xs font-medium text-slate-600">
+                    {ConnectedTools.length} of {tools.length} integrations connected
+                  </span>
+                  <span className="rounded-full bg-slate-200/70 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+                    Composio
+                  </span>
                 </div>
 
                 <div className="space-y-2">
-                  {loadingTools && 
-                  <div className="p-2 border rounded-2xl flex items-center">
-                    <Loader2Icon className="animate-spin"/> Loading Tools...
-                  </div>
-                  }
-                  {tools.map((tool,index)=>(
-                    <div key={`${tool.name}-${index}`} className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                      <div className="flex size-9 items-center justify-center rounded-2xl">
-                        {/* {tool.connected ? (
-                          <Link2 className="size-4 text-emerald-700"/>
-                        ) : (
-                          <Unlink className="size-4 text-muted-foreground"/>
-                        )} */}
-                        <img src={tool.logo} alt={tool.name} width={30} height={30} className="rounded-lg"/>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">
-                          {tool.name}
-                        </p>
-                        <p className={`text-xs ${tool.connected} ? "text-emerald-600" : "text-muted-foreground"`}>
-                          {tool.connected 
-                          ? <span className="text-green-500">Connected</span>
-                          : <span className="text-red-500">Not Connected</span>
-                          }
-                        </p>
-                      </div>
+                  {loadingTools && (
+                    <div className="p-4 border border-slate-200 rounded-xl flex items-center justify-center gap-2 text-xs text-slate-500">
+                      <Loader2 className="size-4 animate-spin text-slate-900" />
+                      <span>Loading available tools...</span>
                     </div>
-                  <Button 
-                  onClick={()=>tool.connected ? disconnectTool(tool.slug) : connectTool(tool.slug)}
-                  type="button" variant={tool.connected ? "outline" : "default"} size='sm' disabled={disconnectToolLoading}>
-                    {disconnectToolLoading && <Loader2 className="animate-spin"/>}
-                          {tool.connected
-                          ? "Disconnect"
-                          : "Connect"
-                          }
-                  </Button>
+                  )}
+
+                  {tools.map((tool, index) => (
+                    <div
+                      key={`${tool.name}-${index}`}
+                      className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-200/80 bg-white hover:border-slate-300 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-slate-100 bg-slate-50 p-1">
+                          <img
+                            src={tool.logo}
+                            alt={tool.name}
+                            className="size-full object-contain rounded"
+                          />
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-950 truncate">
+                            {tool.name}
+                          </p>
+                          <p className="text-[11px] font-medium">
+                            {tool.connected ? (
+                              <span className="text-emerald-600">Connected</span>
+                            ) : (
+                              <span className="text-slate-400">Not connected</span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          tool.connected
+                            ? disconnectTool(tool.slug)
+                            : connectTool(tool.slug)
+                        }
+                        disabled={disconnectToolLoading}
+                        className={
+                          tool.connected
+                            ? "cog-secondary-button text-xs py-1 px-3 h-8 text-rose-600 hover:text-rose-700 hover:border-rose-200"
+                            : "cog-primary-button text-xs py-1 px-3 h-8"
+                        }
+                      >
+                        {disconnectToolLoading && (
+                          <Loader2 className="size-3 animate-spin" />
+                        )}
+                        <span>{tool.connected ? "Disconnect" : "Connect"}</span>
+                      </button>
                     </div>
                   ))}
                 </div>
-
               </section>
 
-
-              {/* ---------------------------------------------------------- */}
-              {/* SCHEDULE */}
-              {/* ---------------------------------------------------------- */}
-
+              {/* Schedule */}
               <section className="space-y-4">
-
                 <SectionTitle
-                  icon={
-                    <CalendarClock className="h-4 w-4" />
-                  }
-                  title="Schedule"
+                  icon={<CalendarClock className="size-4" />}
+                  title="Execution Schedule"
                 />
 
-
-                <div className="rounded-xl border bg-slate-50 p-4 space-y-4">
-
-
+                <div className="rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4 space-y-4">
                   {/* Run Type */}
-
                   <div className="space-y-2">
-
-                    <label className="text-sm font-medium text-slate-700">
-                      Run Type
+                    <label className="block text-xs font-semibold text-slate-700">
+                      Execution Trigger
                     </label>
 
                     <div className="grid grid-cols-2 gap-2">
-
                       <button
                         type="button"
-                        onClick={() =>
-                          updateSchedule(
-                            "type",
-                            "once"
-                          )
-                        }
-                        className={`rounded-xl border px-4 py-3 text-left transition ${
+                        onClick={() => updateSchedule("type", "once")}
+                        className={`rounded-xl border p-3.5 text-left transition-all cursor-pointer ${
                           schedule.type === "once"
-                            ? "border-violet-500 bg-violet-50"
-                            : "border-slate-200 bg-white hover:border-violet-300"
+                            ? "border-slate-950 bg-slate-950 text-white shadow-xs"
+                            : "border-slate-200 bg-white text-slate-800 hover:border-slate-300"
                         }`}
                       >
-
-                        <p className="text-sm font-medium">
-                          Once
+                        <p className="text-xs font-bold">Manual / Once</p>
+                        <p
+                          className={`mt-0.5 text-[11px] ${
+                            schedule.type === "once"
+                              ? "text-slate-300"
+                              : "text-slate-500"
+                          }`}
+                        >
+                          Triggered on demand
                         </p>
-
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Run one time
-                        </p>
-
                       </button>
-
 
                       <button
                         type="button"
-                        onClick={() =>
-                          updateSchedule(
-                            "type",
-                            "recurring"
-                          )
-                        }
-                        className={`rounded-xl border px-4 py-3 text-left transition ${
+                        onClick={() => updateSchedule("type", "recurring")}
+                        className={`rounded-xl border p-3.5 text-left transition-all cursor-pointer ${
                           schedule.type === "recurring"
-                            ? "border-violet-500 bg-violet-50"
-                            : "border-slate-200 bg-white hover:border-violet-300"
+                            ? "border-slate-950 bg-slate-950 text-white shadow-xs"
+                            : "border-slate-200 bg-white text-slate-800 hover:border-slate-300"
                         }`}
                       >
-
-                        <p className="text-sm font-medium">
-                          Recurring
+                        <p className="text-xs font-bold">Recurring</p>
+                        <p
+                          className={`mt-0.5 text-[11px] ${
+                            schedule.type === "recurring"
+                              ? "text-slate-300"
+                              : "text-slate-500"
+                          }`}
+                        >
+                          Runs automatically
                         </p>
-
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Run automatically
-                        </p>
-
                       </button>
-
                     </div>
-
                   </div>
 
-
                   {/* Frequency */}
-
-                  {schedule.type ===
-                    "recurring" && (
-
+                  {schedule.type === "recurring" && (
                     <div className="space-y-2">
-
-                      <label className="text-sm font-medium text-slate-700">
-                        Frequency
+                      <label className="block text-xs font-semibold text-slate-700">
+                        Cadence Frequency
                       </label>
 
                       <div className="grid grid-cols-3 gap-2">
-
-                        {FREQUENCY_OPTIONS.map(
-                          (frequency) => (
-
-                            <button
-                              key={frequency}
-                              type="button"
-                              onClick={() =>
-                                updateSchedule(
-                                  "frequency",
-                                  frequency
-                                )
-                              }
-                              className={`rounded-lg border px-3 py-2.5 text-sm transition ${
-                                schedule.frequency ===
-                                frequency
-                                  ? "border-violet-500 bg-violet-50 text-violet-700"
-                                  : "border-slate-200 bg-white text-slate-600 hover:border-violet-300"
-                              }`}
-                            >
-
-                              {frequency}
-
-                            </button>
-
-                          )
-                        )}
-
+                        {FREQUENCY_OPTIONS.map((frequency) => (
+                          <button
+                            key={frequency}
+                            type="button"
+                            onClick={() => updateSchedule("frequency", frequency)}
+                            className={`rounded-xl border py-2 text-xs font-semibold transition-all cursor-pointer ${
+                              schedule.frequency === frequency
+                                ? "border-slate-950 bg-slate-950 text-white shadow-xs"
+                                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                            }`}
+                          >
+                            {frequency}
+                          </button>
+                        ))}
                       </div>
-
                     </div>
-
                   )}
 
-
                   {/* Time */}
-
-                  <div className="space-y-2">
-
+                  <div className="space-y-1.5">
                     <label
                       htmlFor="agent-time"
-                      className="flex items-center gap-2 text-sm font-medium text-slate-700"
+                      className="flex items-center gap-1.5 text-xs font-semibold text-slate-700"
                     >
-
-                      <Clock3 className="h-4 w-4 text-slate-400" />
-
-                      Time
-
+                      <Clock3 className="size-3.5 text-slate-500" />
+                      <span>Execution Time ({schedule.timezone})</span>
                     </label>
 
-
-                    <Input
+                    <input
                       id="agent-time"
                       type="time"
-                      value={schedule.time}
-                      onChange={(event) =>
-                        updateSchedule(
-                          "time",
-                          event.target.value
-                        )
-                      }
+                      value={schedule.time || ""}
+                      onChange={(event) => updateSchedule("time", event.target.value)}
+                      className="w-full bg-white border border-slate-200/90 rounded-xl px-3.5 py-2 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-950/10 focus:border-slate-900 transition-all"
                     />
-
                   </div>
-
                 </div>
-
               </section>
 
-
-              {/* ---------------------------------------------------------- */}
-              {/* OUTPUT FORMAT */}
-              {/* ---------------------------------------------------------- */}
-
+              {/* Output Format */}
               <section className="space-y-4">
+                <SectionTitle
+                  icon={<FileText className="size-4" />}
+                  title="Deliverable Format"
+                />
 
-  <SectionTitle
-    icon={<FileText className="h-4 w-4" />}
-    title="Output Format"
-  />
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="agent-output"
+                    className="block text-xs font-semibold text-slate-700"
+                  >
+                    Format Instructions
+                  </label>
 
-  <div className="space-y-2">
-
-    <label
-      htmlFor="agent-output"
-      className="text-sm font-medium text-slate-700"
-    >
-      Output Format
-    </label>
-
-    <Textarea
-      id="agent-output"
-      value={draftAgent.outputFormat || ""}
-      onChange={(event) =>
-        updateDraft(
-          "outputFormat",
-          event.target.value
-        )
-      }
-      placeholder="Describe how the agent should format its results."
-      rows={4}
-    />
-
-    <p className="text-xs text-muted-foreground">
-      This is used to guide how the agent presents its results.
-    </p>
-
-  </div>
-
-</section>
-
+                  <textarea
+                    id="agent-output"
+                    value={draftAgent.outputFormat || ""}
+                    onChange={(event) => updateDraft("outputFormat", event.target.value)}
+                    placeholder="e.g. Markdown bullet points, JSON schema, or HTML email preview..."
+                    rows={3}
+                    className="w-full bg-slate-50 border border-slate-200/90 rounded-xl p-3 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-950/10 focus:border-slate-900 transition-all resize-y leading-relaxed"
+                  />
+                </div>
+              </section>
             </div>
-
           </ScrollArea>
 
-
-          {/* -------------------------------------------------------------- */}
-          {/* FOOTER */}
-          {/* -------------------------------------------------------------- */}
-
-          <SheetFooter className="border-t bg-white px-6 py-4">
-
-            <div className="flex w-full items-center justify-end gap-2">
-
-              <Button
+          {/* Footer */}
+          <SheetFooter className="border-t border-slate-100 bg-white px-6 py-4">
+            <div className="flex w-full items-center justify-end gap-2.5">
+              <button
                 type="button"
-                variant="outline"
                 onClick={() => handleOpenChange(false)}
+                className="cog-secondary-button cursor-pointer"
               >
                 Cancel
-              </Button>
+              </button>
 
-
-              <Button
+              <button
                 type="submit"
-                className="gap-2 bg-violet-700 hover:bg-violet-800"
+                disabled={isSubmitting}
+                className="cog-primary-button cursor-pointer disabled:opacity-50"
               >
-
-                <Save className="h-4 w-4" />
-
-                Save Changes
-
-              </Button>
-
+                {isSubmitting ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Save className="size-3.5" />
+                )}
+                <span>{isSubmitting ? "Saving..." : "Save Changes"}</span>
+              </button>
             </div>
-
           </SheetFooter>
-
         </form>
-
       </SheetContent>
-
     </Sheet>
-  )
+  );
 }
-
-
-/* ========================================================================== */
-/* SECTION TITLE                                                               */
-/* ========================================================================== */
-
-type SectionTitleProps = {
-  icon: React.ReactNode
-  title: string
-}
-
 
 function SectionTitle({
   icon,
   title,
-}: SectionTitleProps) {
-
+}: {
+  icon: React.ReactNode;
+  title: string;
+}) {
   return (
-
     <div className="flex items-center gap-2">
-
-      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
-
+      <div className="flex size-7 items-center justify-center rounded-lg bg-slate-100 text-slate-900 border border-slate-200/80 shadow-2xs">
         {icon}
-
       </div>
-
-
-      <h3 className="text-sm font-semibold text-slate-900">
-        {title}
-      </h3>
-
+      <h3 className="text-xs font-bold text-slate-950">{title}</h3>
     </div>
-
-  )
+  );
 }

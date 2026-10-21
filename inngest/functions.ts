@@ -8,7 +8,7 @@ import { inngest } from "./client";
 export const ProcessScheduledAgent = inngest.createFunction(
   {
     id: "process-scheduled-agent-runs",
-    triggers: [{ cron: "*/10000 * * * *" }],
+    triggers: [{ cron: "*/15 * * * *" }],
     // Run this scheduler every 15 minutes to pick pending agent jobs.
   },
   async ({ step }) => {
@@ -208,3 +208,100 @@ export const ProcessScheduledAgent = inngest.createFunction(
 
 // Keep the existing API route import working while using the clearer function name above.
 export const processTask = ProcessScheduledAgent;
+
+export const ExecuteAgentRun = inngest.createFunction(
+  {
+    id: "execute-agent-run",
+    triggers: [{ event: "agent/run.execute" }],
+  },
+  async ({ event, step }: any) => {
+    const { runId } = event.data;
+
+    const runData = await step.run("load-run", async () => {
+      const runs = await db
+        .select({
+          run: AgentRun,
+          agentConfig: AgentConfig,
+        })
+        .from(AgentRun)
+        .innerJoin(AgentConfig, eq(AgentRun.agentId, AgentConfig.agentId))
+        .where(eq(AgentRun.id, runId))
+        .limit(1);
+
+      return runs[0] ?? null;
+    });
+
+    if (!runData) {
+      return { status: "not_found", runId };
+    }
+
+    const { run, agentConfig } = runData;
+
+    await step.run("mark-running", async () => {
+      await db
+        .update(AgentRun)
+        .set({
+          status: "running",
+          startedAt: new Date(),
+        })
+        .where(eq(AgentRun.id, runId));
+    });
+
+    try {
+      const output = await step.run("execute-agent", async () => {
+        const executableAgentConfig: CreatedAgentType = {
+          id: agentConfig.id,
+          userEmail: agentConfig.userEmail ?? run.userEmail,
+          agentId: agentConfig.agentId,
+          name: agentConfig.name ?? "Unnamed Agent",
+          agentImage: agentConfig.agentImage ?? "",
+          description: agentConfig.description ?? "",
+          instructions: agentConfig.instructions ?? "",
+          objective: agentConfig.objective ?? "",
+          tools: agentConfig.tools,
+          skills: Array.isArray(agentConfig.skills)
+            ? (agentConfig.skills as string[])
+            : [],
+          schedule: (agentConfig.schedule ?? {
+            type: "manual",
+          }) as CreatedAgentType["schedule"],
+          outputFormat: agentConfig.outputFormat ?? "",
+          status: agentConfig.status ?? "active",
+          createdAt: String(agentConfig.createdAt),
+          composioSessionId: agentConfig.composioSessionId ?? undefined,
+        };
+
+        return await executeAgent({
+          agentConfig: executableAgentConfig,
+          userEmail: run.userEmail,
+          input: executableAgentConfig.objective,
+        });
+      });
+
+      await step.run("mark-completed", async () => {
+        await db
+          .update(AgentRun)
+          .set({
+            status: "completed",
+            output,
+            completedAt: new Date(),
+          })
+          .where(eq(AgentRun.id, runId));
+      });
+
+      return { status: "completed", runId };
+    } catch (err: any) {
+      await step.run("mark-failed", async () => {
+        await db
+          .update(AgentRun)
+          .set({
+            status: "failed",
+            error: err?.message || "Execution failed",
+            completedAt: new Date(),
+          })
+          .where(eq(AgentRun.id, runId));
+      });
+      return { status: "failed", error: err?.message };
+    }
+  }
+);

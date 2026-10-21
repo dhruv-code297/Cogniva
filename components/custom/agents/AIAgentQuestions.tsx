@@ -25,7 +25,7 @@ export default function AIAgentQuestions({
 
     const currentQuestion = questionList[currentIndex]
 
-    const currentAnswer = answers[currentQuestion.id] || ""
+    const currentAnswer = currentQuestion?.id ? (answers[currentQuestion.id] ?? "") : ""
 
     const handleAnswer = (value: string) => {
         setAnswers((prev) => ({
@@ -158,7 +158,7 @@ export default function AIAgentQuestions({
                                     ? currentQuestion.type
                                     : "text"
                             }
-                            value={currentAnswer}
+                            value={currentAnswer || ""}
                             onChange={(e) =>
                                 handleAnswer(e.target.value)
                             }
@@ -296,7 +296,7 @@ export default function AIAgentQuestions({
 
                                         <Input
                                             autoFocus
-                                            value={currentAnswer}
+                                            value={currentAnswer || ""}
                                             onChange={(e) =>
                                                 handleAnswer(e.target.value)
                                             }

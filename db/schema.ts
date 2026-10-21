@@ -89,7 +89,9 @@ export const AgentRun = pgTable(
 
     timezone: varchar("timezone", {
       length: 100,
-    }).notNull(),
+    })
+      .default("UTC")
+      .notNull(),
 
     status: varchar("status")
       .default("scheduled")

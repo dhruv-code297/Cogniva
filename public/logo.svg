@@ -1,11 +1,36 @@
-<svg width="63" height="70" viewBox="0 0 63 70" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M33.817 52.382c0-15.988 12.96-28.948 28.948-28.948v17.585c0 15.987-12.96 28.948-28.948 28.948zm-4.869 0c0-15.988-12.96-28.948-28.948-28.948v17.585c0 15.987 12.96 28.948 28.948 28.948z" fill="#1e2939"/>
-  <g clip-path="url(#a)">
-    <path d="M31.487 0c0 8.764 7.049 15.881 15.786 15.992l.207.001-.207.001c-8.737.11-15.786 7.228-15.786 15.992 0-8.833-7.16-15.993-15.993-15.993 8.833 0 15.993-7.16 15.993-15.993" fill="#1e2939"/>
-  </g>
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <clipPath id="a">
-      <path fill="#fff" d="M15.494 0H47.48v31.986H15.494z"/>
-    </clipPath>
+    <linearGradient id="cogniva-bg" x1="4" y1="4" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="cogniva-spark" x1="20" y1="16" x2="44" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="50%" stop-color="#F1F5F9"/>
+      <stop offset="100%" stop-color="#CBD5E1"/>
+    </linearGradient>
+    <linearGradient id="cogniva-glow" x1="16" y1="16" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#818CF8" stop-opacity="0.1"/>
+    </linearGradient>
   </defs>
+
+  <!-- Outer Rounded Square Tile -->
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#cogniva-bg)"/>
+  <rect x="4.5" y="4.5" width="55" height="55" rx="15.5" stroke="#334155" stroke-opacity="0.6"/>
+
+  <!-- Ambient Glow Behind Spark -->
+  <circle cx="32" cy="32" r="16" fill="url(#cogniva-glow)"/>
+
+  <!-- Core Geometric Star / Sparkle of Cognition & Agency -->
+  <path d="M32 15C32 24.3888 24.3888 32 15 32C24.3888 32 32 39.6112 32 49C32 39.6112 39.6112 32 49 32C39.6112 32 32 24.3888 32 15Z"
+        fill="url(#cogniva-spark)"/>
+
+  <!-- Inner Diamond Nexus -->
+  <path d="M32 27L36 32L32 37L28 32L32 27Z" fill="#0F172A" opacity="0.15"/>
+  <circle cx="32" cy="32" r="2.5" fill="#0F172A"/>
+
+  <!-- Orbiting Intelligence Micro-Nodes -->
+  <circle cx="45" cy="19" r="2" fill="#38BDF8" opacity="0.9"/>
+  <circle cx="19" cy="45" r="1.5" fill="#818CF8" opacity="0.8"/>
 </svg>

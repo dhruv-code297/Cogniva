@@ -1,99 +1,204 @@
-"use client"
-import { Progress } from "@/components/ui/progress"
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { UserButton, useUser } from "@clerk/nextjs";
+import { useContext, useState } from "react";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar"
-import { UserDetailContext } from "@/context/UserDetailContext"
-import { UserButton } from "@clerk/nextjs"
-import { AppWindow, Blocks, Bot, Layers, Play, Settings, User } from "lucide-react"
-import Image from "next/image"
-import { usePathname, useRouter } from "next/navigation"
-import { useContext } from "react"
+  Activity,
+  ArrowUpRight,
+  Blocks,
+  Bot,
+  LayoutDashboard,
+  Menu,
+  Settings2,
+  Shapes,
+  Sparkles,
+  UserRound,
+  X,
+  Zap,
+} from "lucide-react";
+import { CognivaLogo } from "@/components/brand/CognivaLogo";
+import { UserDetailContext } from "@/context/UserDetailContext";
 
-export function AppSidebar() {
+const mainNav = [
+  { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Agents", href: "/dashboard/agents", icon: Bot },
+  { label: "Runs", href: "/dashboard/run", icon: Activity },
+  { label: "Integrations", href: "/dashboard/integrations", icon: Blocks },
+  { label: "Templates", href: "/dashboard/templates", icon: Shapes },
+];
 
-const path = usePathname();
+const accountNav = [
+  { label: "Settings", href: "/dashboard/settings", icon: Settings2 },
+  { label: "Profile", href: "/dashboard/profile", icon: UserRound },
+];
 
- const {userDetail,setUserDetail} = useContext(UserDetailContext);
- const router = useRouter();
+export function AppSidebar({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const { user } = useUser();
+  const { userDetail } = useContext(UserDetailContext);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const active = [...mainNav, ...accountNav].find((item) => item.href === pathname)?.label ?? "Workspace";
+
+  const renderNav = (items: typeof mainNav) =>
+    items.map((item) => {
+      const selected = pathname === item.href;
+      const Icon = item.icon;
+      return (
+        <Link
+          key={item.href}
+          href={item.href}
+          onClick={() => setMobileOpen(false)}
+          aria-current={selected ? "page" : undefined}
+          className={`cog-nav-link ${selected ? "is-active" : ""}`}
+        >
+          <Icon size={17} strokeWidth={selected ? 2.2 : 1.8} />
+          <span>{item.label}</span>
+          {selected && <span className="cog-nav-active-dot" />}
+        </Link>
+      );
+    });
 
   return (
-    <Sidebar>
-      <SidebarHeader className="flex flex-row gap-2.5 items-center px-4 py-4">
-        <Image src={'/logo.svg'} alt="logo" width={40} height={40}/>
-        <h2 className="font-semibold text-lg text-slate-900 text-[30px]">Cogniva</h2>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-            <SidebarGroupLabel>Workspace</SidebarGroupLabel>
-            <SidebarMenuButton onClick={()=> router.push('/dashboard')} className={`h-12 gap-3 hover:bg-slate-100 ${path==('/dashboard')?'bg-slate-100':null}`}>
-                <div className="flex h-9 w-8 shrink-0 bg-blue-100 items-center justify-center rounded-lg">
-                    <AppWindow className="h-[18px] w-[18px] text-blue-900"/>
-                </div>
-                <span>Dashboard</span>
-            </SidebarMenuButton>
-            <SidebarMenuButton onClick={()=> router.push('/dashboard/agents')}  className={`h-12 gap-3 hover:bg-slate-100 ${path ==('/dashboard/agents')?'bg-slate-100':null}`}>
-                <div className="flex h-9 w-8 shrink-0 bg-green-100 items-center justify-center rounded-lg">
-                    <Bot className="h-[18px] w-[18px] text-green-900"/>
-                </div>
-                <span>Agents</span>
-            </SidebarMenuButton>
-            <SidebarMenuButton onClick={()=> router.push('/dashboard/run')}  className={`h-12 gap-3 hover:bg-slate-100 ${path ==('/dashboard/play')?'bg-slate-100':null}`}>
-                <div className="flex h-9 w-8 shrink-0 bg-red-100 items-center justify-center rounded-lg">
-                    <Play className="h-[18px] w-[18px] text-red-900"/>
-                </div>
-                <span>Runs</span>
-            </SidebarMenuButton>
-            <SidebarMenuButton onClick={()=> router.push('/dashboard/integrations')}  className={`h-12 gap-3 hover:bg-slate-100 ${path ==('/dashboard/integrations')?'bg-slate-100':null}`}>
-                <div className="flex h-9 w-8 shrink-0 bg-purple-100 items-center justify-center rounded-lg">
-                    <Blocks className="h-[18px] w-[18px] text-purple-900"/>
-                </div>
-                <span>Integrations</span>
-            </SidebarMenuButton>
-            <SidebarMenuButton onClick={()=> router.push('/dashboard/templates')}  className={`h-12 gap-3 hover:bg-slate-100 ${path ==('/dashboard/templates')?'bg-slate-100':null}`}>
-                <div className="flex h-9 w-8 shrink-0 bg-orange-100 items-center justify-center rounded-lg">
-                    <Layers className="h-[18px] w-[18px] text-orange-900"/>
-                </div>
-                <span>Templates</span>
-            </SidebarMenuButton>
-        </SidebarGroup>
-        <SidebarGroup>
-            <SidebarGroupLabel>
-                Users
-            </SidebarGroupLabel>
-            <SidebarMenuButton className={`h-12 gap-3 hover:bg-slate-100 ${path == ('/dashboard/settings')?'bg-slate-100':null}`}>
-                <div className="flex h-9 w-8 shrink-0 bg-gray-100 items-center justify-center rounded-lg">
-                    <Settings className="h-[18px] w-[18px] text-gray-900"/>
-                </div>
-                <span>Settings</span>
-            </SidebarMenuButton>
-            <SidebarMenuButton className={`h-12 gap-3 hover:bg-slate-100 ${path ==('/dashboard/profile')?'bg-slate-100':null}`}>
-                <div className="flex h-9 w-8 shrink-0 bg-yellow-100 items-center justify-center rounded-lg">
-                    <User className="h-[18px] w-[18px] text-yellow-900"/>
-                </div>
-                <span>Profile</span>
-            </SidebarMenuButton>
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarFooter>
-        <div className="p-2 border rounded-lg gap-2 flex-col">
-            <h2 className="flex justify-between">Agents <span>{userDetail?.agentCredits}/5</span></h2>
-            <h2 className="flex justify-between">Credits <span>{userDetail?.usageCredits}</span></h2>
-            <Progress value={66}/>
-        </div>
-        <div className="flex items-center p-2 mt-2 gap-2.5">
-        <UserButton/>
-    <span>{userDetail?.name}</span>
+    <div className="cog-app-shell">
+      {/* Mobile scrim */}
+      {mobileOpen && (
+        <button
+          className="cog-sidebar-scrim"
+          aria-label="Close navigation"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Main Sidebar */}
+      <aside className={`cog-sidebar ${mobileOpen ? "is-open" : ""}`}>
+        {/* Brand header */}
+        <div className="cog-sidebar-brand">
+          <CognivaLogo
+            size={34}
+            href="/dashboard"
+            wordmarkClassName="text-xl font-bold tracking-tight text-slate-900"
+          />
+          <button
+            className="cog-mobile-close p-1.5 rounded-lg hover:bg-slate-100"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Close navigation"
+          >
+            <X size={18} />
+          </button>
         </div>
 
-      </SidebarFooter>
-    </Sidebar>
-  )
+        {/* Workspace Pill */}
+        <div className="cog-workspace-switch">
+          <span className="cog-workspace-mark">
+            <Sparkles size={15} className="text-cyan-400" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <strong className="block truncate">Cogniva Workspace</strong>
+            <small className="block text-slate-500 font-medium text-[11px]">
+              AI Automation Studio
+            </small>
+          </div>
+        </div>
+
+        {/* Nav lists */}
+        <div className="cog-sidebar-scroll">
+          <div className="cog-nav-group">
+            <p className="cog-nav-label">WORKSPACE</p>
+            {renderNav(mainNav)}
+          </div>
+          <div className="cog-nav-group">
+            <p className="cog-nav-label">ACCOUNT</p>
+            {renderNav(accountNav)}
+          </div>
+        </div>
+
+        {/* Bottom card & profile */}
+        <div className="cog-sidebar-bottom">
+          <div className="cog-usage-card">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Zap size={14} className="text-amber-500 fill-amber-500" />
+                Usage Credits
+              </span>
+              <span className="text-[11px] font-semibold text-slate-500">
+                {userDetail?.usageCredits ?? "100"} left
+              </span>
+            </div>
+            <div className="mt-2.5 flex items-baseline gap-1">
+              <strong className="text-2xl font-black text-slate-950 tracking-tight">
+                {userDetail?.usageCredits ?? "100"}
+              </strong>
+              <span className="text-[11px] text-slate-500">/ 100 credits</span>
+            </div>
+            <div className="cog-usage-track">
+              <span
+                style={{
+                  width: `${Math.max(0, Math.min(100, Number(userDetail?.usageCredits ?? 100)))}%`,
+                }}
+              />
+            </div>
+            <Link
+              href="/dashboard/settings"
+              className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-semibold text-slate-700 hover:text-slate-950 hover:underline"
+            >
+              <span>Manage credits & plan</span>
+              <ArrowUpRight size={12} />
+            </Link>
+          </div>
+
+          <div className="cog-sidebar-user">
+            <UserButton appearance={{ elements: { avatarBox: "!size-8" } }} />
+            <Link href="/dashboard/profile" className="min-w-0 flex-1">
+              <span className="block truncate text-xs font-bold text-slate-900">
+                {user?.fullName || userDetail?.name || "Your Profile"}
+              </span>
+              <span className="block truncate text-[11px] text-slate-500">
+                {user?.primaryEmailAddress?.emailAddress || "Workspace Member"}
+              </span>
+            </Link>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="cog-main-frame">
+        {/* Topbar */}
+        <header className="cog-topbar">
+          <div className="flex items-center gap-3">
+            <button
+              className="cog-menu-button p-1.5 rounded-lg hover:bg-slate-100"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Open navigation"
+            >
+              <Menu size={20} />
+            </button>
+            <span className="hidden text-xs text-slate-400 font-medium lg:block">
+              Cogniva
+            </span>
+            <span className="hidden text-slate-300 lg:block">/</span>
+            <span className="text-sm font-semibold text-slate-900">
+              {active}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <Link
+              href="/dashboard/agents"
+              className="hidden sm:inline-flex items-center gap-1.5 bg-slate-950 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-xs transition-all hover:-translate-y-0.5"
+            >
+              <Bot size={14} />
+              <span>+ New Agent</span>
+            </Link>
+            <span className="hidden h-5 w-px bg-slate-200 sm:block" />
+            <UserButton appearance={{ elements: { avatarBox: "!size-8" } }} />
+          </div>
+        </header>
+
+        {/* Page children */}
+        <main className="cog-main-content">{children}</main>
+      </div>
+    </div>
+  );
 }
